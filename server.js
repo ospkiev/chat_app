@@ -7,7 +7,7 @@ const io = require("socket.io")(server, {
     path: '/chat/',
     origins: "*:*"
 });
-const PORT = process.env.PORT||3003;
+const PORT = process.env.PORT || 3003;
 app.use(cors());
 app.options('*', cors());
 
@@ -15,7 +15,7 @@ mongoose.Promise = global.Promise;
 mongoose.set('useNewUrlParser', true);
 mongoose.set('useFindAndModify', false);
 mongoose.set('useCreateIndex', true);
-mongoose.connect('mongodb://root:567234@ds121965.mlab.com:21965/it651');
+mongoose.connect('mongodb://admin:19851985Pol@ds157064.mlab.com:57064/sandbox_db');
 const Message = require('./schema');
 // app.get('/', (req, res) => {
 //     Message.find({}, (err,message) => {
@@ -24,25 +24,25 @@ const Message = require('./schema');
 //     })
 // })
 let online = 0;
-io.on('connection', (client) => {    
-        console.log("User connected");
+io.on('connection', (client) => {
+    console.log("User connected");
     //     let allMessages = Message.find();    
     // client.broadcast.emit("all-masseges", allMessages);
-        console.log(++online);   
+    console.log(++online);
     client.broadcast.emit("change-online", online);
     client.on("disconnect", () => {
         console.log(--online);
         client.broadcast.emit("change-online", online);
-        });
+    });
     client.on("message", (message) => {
         console.log(message);
         client.broadcast.emit("new-message", message);
-        
+
         const newMessage = Message(message)
         console.log(newMessage);
         newMessage.save();
-        
-        });
+
+    });
     client.on("typing", (is) => {
         client.broadcast.emit("somebody-typing", is);
     })
