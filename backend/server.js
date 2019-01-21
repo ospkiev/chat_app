@@ -25,58 +25,100 @@ const Message = require('./schema');
 // })
 let online = 0;
 io.on('connection', (client) => {
-    console.log("User connected");
-    let allMes = Message.find();
-    allMes.exec(function (err, docs) {
-        if (err) throw err;
-        console.log('Send message from DB');
-        client.broadcast.emit("all-messages", docs);
-        console.log(docs);
-    })
+    client.on('new-user', (user) => {
+        console.log("User connected");
+        console.log(++online);
+        client.broadcast.emit("change-online", online)
+        console.log(user);
+        let allMes = Message.find();
 
-    //     let allMessages = Message.find();    
-    // client.broadcast.emit("all-masseges", allMessages);
-    console.log(++online);
-    client.broadcast.emit("change-online", online);
+        allMes.exec(function (err, docs) {   // sort('-time').limit(30)
+            if (err) throw err;
+            console.log('Send message from DB');
+            let obj = {
+                docs: docs,
+                online: online,
+            }
+            client.emit('all-messages', obj)
+        })
+    })
     client.on("disconnect", () => {
         console.log(--online);
+        console.log(`Now in chat ${online} users.`);
         client.broadcast.emit("change-online", online);
     });
-    client.on("message", (message) => {
-        // message.author = client.id;
-        // console.log(message);
-        // client.broadcast.emit("new-message", message);
 
-        // const newMessage = Message(message)
-        // console.log(newMessage);
+    client.on("message", (message) => {
+        // console.log(message);
         Message.create(message, err => {
             if (err) return console.error(err);
             client.broadcast.emit("new-message", message);
         });
-
     });
-
+    client.on("typing", (data) => {
+        console.log(data)
+        client.broadcast.emit("somebody-typing", data);
+    })
+    client.on('deleteMessage', (id) => {
+        Message.findOneAndRemove({ messageId: id }, err => {
+            if (err) throw err
+            console.log('Message succsessfully delete!')
+            client.broadcast.emit("message-was-deleted", id);
+        })
+    })
     client.on("editMessage", (id, editMess) => {
-        Message.findOneAndUpdate({ frontId: id }, editMess, err => {
+        Message.findOneAndUpdate({ messageId: id }, editMess, err => {
             if (err) throw err
             console.log('Message succsessfully edit!')
             client.broadcast.emit("message-was-edited", editMess);
         })
     })
-
-
-    client.on("deleteMessage", (messageId) => {
-        Message.findOneAndDelete({ frontId: messageId }, err => {
-            if (err) throw err;
-            console.log('Message delete!');
-            client.broadcast.emit("messageWasDeleted", messageId);
-        })
-    })
-
-    client.on("typing", (is) => {
-        client.broadcast.emit("somebody-typing", is);
-    })
 });
+// io.on('connection', (client) => {
+//     console.log("User connected");
+//     let allMes = Message.find();
+//     allMes.exec(function (err, docs) {
+//         if (err) throw err;
+//         console.log('Send message from DB');
+//         client.emit("all-messages", docs);
+//         console.log(docs);
+//     })
+//     console.log(++online);
+//     client.broadcast.emit("change-online", online);
+//     client.on("disconnect", () => {
+//         console.log(--online);
+//         client.broadcast.emit("change-online", online);
+//     });
+//     client.on("message", (message) => {
+
+//         Message.create(message, err => {
+//             if (err) return console.error(err);
+//             client.broadcast.emit("new-message", message);
+//         });
+
+//     });
+
+//     client.on("editMessage", (id, editMess) => {
+//         Message.findOneAndUpdate({ frontId: id }, editMess, err => {
+//             if (err) throw err
+//             console.log('Message succsessfully edit!')
+//             client.broadcast.emit("message-was-edited", editMess);
+//         })
+//     })
+
+
+//     client.on("deleteMessage", (messageId) => {
+//         Message.findOneAndDelete({ frontId: messageId }, err => {
+//             if (err) throw err;
+//             console.log('Message delete!');
+//             client.broadcast.emit("messageWasDeleted", messageId);
+//         })
+//     })
+
+//     client.on("typing", (is) => {
+//         client.broadcast.emit("somebody-typing", is);
+//     })
+// });
 
 app.use(express.static('./frontend/build'));
 server.listen(PORT, () => (console.log(`server is running on ${PORT}`)));
